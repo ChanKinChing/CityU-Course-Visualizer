@@ -1,6 +1,10 @@
 import { chromium } from "playwright";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const URL = "file:///C:/MY_PROJECTS_/Web-CityU-Course-Visualizer-1.0.0/index.html";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const BASE = path.resolve(__dirname, "..");
+const URL = `file:///${path.join(BASE, "index.html").replace(/\\/g, "/")}`;
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 const page = await browser.newPage({ viewport: { width: 1500, height: 950 } });
 const errors = [];
@@ -277,6 +281,6 @@ check("多課程代碼 OR: 同時顯示兩科", pairBoth.has2115 && pairBoth.has
 
 // ---------- final ----------
 console.log(`\n==== 結果: ${pass} PASS / ${fail} FAIL ====`);
-await page.screenshot({ path: "C:/MY_PROJECTS_/Web-CityU-Course-Visualizer-1.0.0/tests/final.png", fullPage: true });
+await page.screenshot({ path: path.join(__dirname, "final.png"), fullPage: true });
 await browser.close();
 process.exit(fail > 0 ? 1 : 0);

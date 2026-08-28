@@ -3,8 +3,7 @@
  * Web-CityU-Course-Visualizer-1.0.0 - data-prep.mjs
  * 讀取 Tool-CityU-Course-Fetcher 輸出的 courses.json, 瘦身並產生 data.js
  *
- * 用法: node data-prep.mjs [courses.json 路徑]
- *   預設: C:\MY_PROJECTS_\Tool-CityU-Course-Fetcher-1.0.0\output\<最新>\
+ * 用法: node data-prep.mjs [courses.json 路徑] [data.js 輸出路徑]
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -15,8 +14,8 @@ const SRC = process.argv[2];
 const OUT = process.argv[3] || path.join(__dirname, "data.js");
 
 function findLatestSource() {
-  const root = "C:\\MY_PROJECTS_\\Tool-CityU-Course-Fetcher-1.0.0\\output";
-  const dirs = fs.readdirSync(root).filter((d) => /^2026/.test(d)).sort().reverse();
+  const root = path.join(__dirname, "..", "fetcher", "output");
+  const dirs = fs.readdirSync(root).filter((d) => /^20\d{2}/.test(d)).sort().reverse();
   for (const d of dirs) {
     const p = path.join(root, d, "courses.json");
     if (fs.existsSync(p)) return p;
