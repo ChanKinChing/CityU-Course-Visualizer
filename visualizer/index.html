@@ -993,7 +993,20 @@
   </aside>
   <div class="toast" id="toast"></div>
 
-  <script src="data.js"></script>
+  <script>
+    /* Load data.js from GitHub Pages (auto-updated monthly). Fallback to local data.js if offline. */
+    (function() {
+      var s = document.createElement('script');
+      s.src = 'https://chankinching.github.io/CityU-Course-Visualizer/data.js';
+      s.onload = function() {};
+      s.onerror = function() {
+        var f = document.createElement('script');
+        f.src = 'data.js';
+        document.head.appendChild(f);
+      };
+      document.head.appendChild(s);
+    })();
+  </script>
   <script>
     "use strict";
     const DATA = window.COURSE_DATA;

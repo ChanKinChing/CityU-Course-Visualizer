@@ -27,6 +27,94 @@ const src = SRC || findLatestSource();
 const raw = JSON.parse(fs.readFileSync(src, "utf8"));
 const { meta, courses } = raw;
 
+// ===== Layer 1: Structural validation (hard gate) =====
+function validateCourseData(raw) {
+  const errors = [];
+  const warnings = [];
+
+  // Top-level checks
+  if (!raw.meta || typeof raw.meta !== "object") {
+    errors.push("meta object missing");
+  } else {
+    if (!raw.meta.term) errors.push("meta.term (semester) missing");
+    if (!raw.meta.subjects || !Array.isArray(raw.meta.subjects)) {
+      errors.push("meta.subjects (array) missing");
+    }
+  }
+
+  if (!Array.isArray(raw.courses)) {
+    errors.push("courses array missing");
+    return { errors, warnings }; // can't check further
+  }
+
+  if (raw.courses.length === 0) {
+    errors.push("courses array is empty (0 courses)");
+    return { errors, warnings };
+  }
+
+  // Per-course checks
+  let totalSections = 0;
+  for (let i = 0; i < raw.courses.length; i++) {
+    const c = raw.courses[i];
+    const tag = `courses[${i}] (${c.code || "?"})`;
+    if (!c.code) errors.push(`${tag}: code missing`);
+    if (!c.title) errors.push(`${tag}: title missing`);
+    if (c.credits == null) warnings.push(`${tag}: credits is null`);
+    if (!Array.isArray(c.sections)) {
+      errors.push(`${tag}: sections array missing`);
+      continue;
+    }
+
+    // Per-section checks
+    for (let j = 0; j < c.sections.length; j++) {
+      const s = c.sections[j];
+      const stag = `${tag}.sections[${j}]`;
+      totalSections++;
+
+      // CRN: must be 5-digit string or number
+      const crnStr = String(s.crn || "");
+      if (!/^\d{5}$/.test(crnStr)) {
+        errors.push(`${stag}: crn invalid (got "${s.crn}")`);
+      }
+
+      // Seats
+      if (!s.seats || typeof s.seats !== "object") {
+        warnings.push(`${stag}: seats missing`);
+      } else {
+        if (s.seats.capacity == null) warnings.push(`${stag}: seats.capacity missing`);
+        if (s.seats.remaining == null) warnings.push(`${stag}: seats.remaining missing`);
+      }
+
+      // Meetings (schedule)
+      if (!Array.isArray(s.meetings) || s.meetings.length === 0) {
+        warnings.push(`${stag}: no meetings (may be TBA)`);
+      } else {
+        for (let k = 0; k < s.meetings.length; k++) {
+          const mt = s.meetings[k];
+          if (!mt.where && !mt.building && !mt.room) {
+            warnings.push(`${stag}.meetings[${k}]: no location info`);
+          }
+        }
+      }
+    }
+  }
+
+  console.log(`[validate] ${raw.courses.length} courses, ${totalSections} sections checked`);
+  if (errors.length) console.error(`[validate] ERRORS (${errors.length}):`);
+  for (const e of errors) console.error(`  [ERROR] ${e}`);
+  if (warnings.length) console.warn(`[validate] WARNINGS (${warnings.length}):`);
+  for (const w of warnings) console.warn(`  [WARN] ${w}`);
+
+  return { errors, warnings };
+}
+
+const validation = validateCourseData(raw);
+if (validation.errors.length > 0) {
+  console.error(`\nFATAL: ${validation.errors.length} structural errors found. Aborting.`);
+  process.exit(1);
+}
+console.log(`[validate] PASSED (${validation.warnings.length} warnings)\n`);
+
 // 時間 "9:00 am" -> 分鐘
 function toMins(t) {
   t = String(t || "").trim();

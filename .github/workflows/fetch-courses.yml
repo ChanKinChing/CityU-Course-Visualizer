@@ -2,7 +2,7 @@ name: Fetch Courses
 
 on:
   schedule:
-    - cron: "0 22 * * 0"  # Every Sunday 6am HKT (22:00 UTC Saturday)
+    - cron: "0 22 1 * *"  # 1st of each month, 6am HKT (22:00 UTC prev day)
   workflow_dispatch:
     inputs:
       subjects:
@@ -49,16 +49,63 @@ jobs:
           echo "path=${LATEST}" >> $GITHUB_OUTPUT
           echo "Latest output: $LATEST"
 
+      # === Layer 1: Structural validation (hard gate) ===
+      - name: "Layer 1: Validate course data structure"
+        run: |
+          echo "=== Layer 1: Structural validation ==="
+          node data-prep.mjs "${{ steps.find.outputs.path }}courses.json" /dev/null
+          echo "Layer 1 PASSED"
+
+      # === Layer 2: Differential comparison (anti-empty-fetch) ===
+      - name: "Layer 2: Diff check against previous data"
+        run: |
+          echo "=== Layer 2: Differential comparison ==="
+
+          NEW_COURSES=$(cat "${{ steps.find.outputs.path }}meta.json" | grep -o '"courseCount": [0-9]*' | grep -o '[0-9]*')
+          NEW_SECTIONS=$(cat "${{ steps.find.outputs.path }}meta.json" | grep -o '"sectionCount": [0-9]*' | grep -o '[0-9]*')
+          echo "New: ${NEW_COURSES} courses, ${NEW_SECTIONS} sections"
+
+          # Try to get old stats from existing data.js
+          OLD_SECTIONS=0
+          if git show main:data.js > /tmp/old_data.js 2>/dev/null; then
+            OLD_STATS=$(node -e "
+              const fs = require('fs');
+              const raw = fs.readFileSync('/tmp/old_data.js', 'utf8');
+              const m = raw.match(/window\\.COURSE_DATA = ({.*});/s);
+              if (m) { const d = JSON.parse(m[1]); process.stdout.write(d.stats.courses + ' ' + d.stats.sections); }
+              else process.stdout.write('0 0');
+            ")
+            OLD_COURSES=$(echo $OLD_STATS | cut -d' ' -f1)
+            OLD_SECTIONS=$(echo $OLD_STATS | cut -d' ' -f2)
+            echo "Old: ${OLD_COURSES} courses, ${OLD_SECTIONS} sections"
+          else
+            echo "No previous data.js (first run) - skipping diff"
+          fi
+
+          if [ "$OLD_SECTIONS" -gt 0 ]; then
+            DROP_PCT=$(( (OLD_SECTIONS - NEW_SECTIONS) * 100 / OLD_SECTIONS ))
+            echo "Drop: ${DROP_PCT}%"
+            if [ "$DROP_PCT" -gt 20 ]; then
+              echo ""
+              echo "ABORT: Data regression detected!"
+              echo "  Previous: ${OLD_SECTIONS} sections"
+              echo "  New:      ${NEW_SECTIONS} sections"
+              echo "  Drop:     ${DROP_PCT}% (threshold: 20%)"
+              exit 1
+            fi
+            echo "Layer 2 PASSED (drop ${DROP_PCT}% <= 20%)"
+          fi
+
       - name: Generate data.js
         run: |
-          node visualizer/data-prep.mjs "${{ steps.find.outputs.path }}courses.json" data.js
+          node data-prep.mjs "${{ steps.find.outputs.path }}courses.json" data.js
 
       - name: Show summary
         run: |
           echo "=== Output ==="
           wc -c data.js
           echo ""
-          echo "=== Stats from meta.json ==="
+          echo "=== Stats ==="
           cat "${{ steps.find.outputs.path }}meta.json" | grep -E "courseCount|sectionCount|seatDataComplete"
 
       - name: Commit updated data.js

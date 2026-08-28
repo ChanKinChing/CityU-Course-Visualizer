@@ -993,11 +993,29 @@
   </aside>
   <div class="toast" id="toast"></div>
 
-  <script src="data.js"></script>
+  <script>
+    /* Load data.js from GitHub Pages (auto-updated monthly). Fallback to local data.js if offline. */
+    (function() {
+      var s = document.createElement('script');
+      s.src = 'https://chankinching.github.io/CityU-Course-Visualizer/data.js';
+      s.onload = function() { /* loaded from GitHub */ };
+      s.onerror = function() {
+        /* fallback: try local data.js */
+        var f = document.createElement('script');
+        f.src = 'data.js';
+        document.head.appendChild(f);
+      };
+      document.head.appendChild(s);
+    })();
+  </script>
   <script>
     "use strict";
     const DATA = window.COURSE_DATA;
-    if (!DATA) { document.querySelector('.wrap').innerHTML = '<h1 style="color:#e55;padding:2rem">Failed to load course data.</h1>'; throw new Error('No data'); }
+    if (!DATA) {
+      var wrap = document.querySelector('.wrap') || document.querySelector('.app') || document.body;
+      wrap.innerHTML = '<h1 style="color:#e55;padding:2rem">Failed to load course data. Please check your connection.</h1>';
+      throw new Error('No data');
+    }
     const DAY_NAMES = DATA.meta.dayNames;
     const G_START = DATA.meta.gridStart, G_END = DATA.meta.gridEnd;
     const MIN_PER_PX = 0.85;
