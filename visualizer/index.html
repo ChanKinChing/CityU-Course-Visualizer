@@ -1,0 +1,1647 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CityU 課程時間表視覺化工具</title>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #111a2c;
+      --panel2: #152238;
+      --line: #24314d;
+      --line2: #1c2a45;
+      --txt: #e8eefb;
+      --dim: #8ba0c4;
+      --dim2: #5d7299;
+      --acc: #38bdf8;
+      --acc2: #818cf8;
+      --red: #f87171;
+      --amber: #fbbf24;
+      --green: #34d399;
+      --grid-w: calc((100% - 150px)/6);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    html,
+    body {
+      height: 100%
+    }
+
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(900px 500px at 85% -10%, rgba(56, 189, 248, .12), transparent 60%),
+        radial-gradient(800px 500px at -10% 110%, rgba(129, 140, 248, .12), transparent 60%),
+        var(--bg);
+      color: var(--txt);
+      font-size: 14px;
+      overflow: hidden;
+    }
+
+    .material-symbols-rounded {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      vertical-align: -4px;
+      user-select: none
+    }
+
+    button {
+      font-family: inherit;
+      color: inherit;
+      background: none;
+      border: none;
+      cursor: pointer
+    }
+
+    input,
+    select {
+      font-family: inherit;
+      color: var(--txt);
+      background: #0d1630;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 13px;
+      outline: none
+    }
+
+    input:focus,
+    select:focus {
+      border-color: var(--acc)
+    }
+
+    input[type=checkbox],
+    input[type=radio] {
+      accent-color: var(--acc)
+    }
+
+    /* ---------- layout ---------- */
+    .app {
+      display: flex;
+      height: 100vh
+    }
+
+    .sidebar {
+      width: 290px;
+      min-width: 290px;
+      background: rgba(17, 26, 44, .85);
+      backdrop-filter: blur(14px);
+      border-right: 1px solid var(--line);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      z-index: 5;
+      transition: margin-left .25s ease;
+    }
+
+    .sidebar.collapsed {
+      margin-left: -290px
+    }
+
+    .main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      position: relative
+    }
+
+    .hamburger {
+      position: absolute;
+      left: 10px;
+      top: 10px;
+      z-index: 20;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px;
+      display: none
+    }
+
+    /* ---------- sidebar ---------- */
+    .brand {
+      padding: 18px 18px 12px;
+      border-bottom: 1px solid var(--line)
+    }
+
+    .brand h1 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: .3px
+    }
+
+    .brand .sub {
+      color: var(--dim);
+      font-size: 11.5px;
+      margin-top: 4px;
+      line-height: 1.5
+    }
+
+    .filter {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line)
+    }
+
+    .filter h2 {
+      font-size: 12px;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px
+    }
+
+    .field {
+      margin-bottom: 12px
+    }
+
+    .field label {
+      display: block;
+      font-size: 12.5px;
+      color: var(--dim2);
+      margin-bottom: 6px
+    }
+
+    .chiprow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 11px;
+      border-radius: 99px;
+      border: 1px solid var(--line);
+      background: #0d1630;
+      font-size: 12.5px;
+      cursor: pointer;
+      transition: .15s;
+    }
+
+    .chip:hover {
+      border-color: var(--dim2)
+    }
+
+    .chip.on {
+      border-color: var(--acc);
+      background: rgba(56, 189, 248, .12);
+      color: #bfe9ff
+    }
+
+    .chip .n {
+      color: var(--dim2);
+      font-size: 11px
+    }
+
+    input.search {
+      width: 100%;
+      padding: 8px 11px;
+      transition: border-color .2s
+    }
+
+    /* 輸入框高亮樣式 */
+    input.search.match {
+      border-color: var(--acc) !important;
+    }
+
+    input.search.no-match {
+      border-color: var(--red) !important;
+    }
+
+    .toggles {
+      display: flex;
+      flex-direction: column;
+      gap: 8px
+    }
+
+    .tg {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--txt);
+      padding: 3px 0
+    }
+
+    .tg small {
+      color: var(--dim2);
+      margin-left: auto
+    }
+
+    /* busy blocks */
+    .busy-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 300px;
+      overflow-y: auto
+    }
+
+    .busy-item {
+      background: #0d1630;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px 10px;
+    }
+
+    .busy-item .b-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .busy-item .b-title {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #ffd7d7
+    }
+
+    .busy-item .b-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .busy-item .b-row select {
+      width: 70px;
+      padding: 3px 4px;
+      font-size: 12px
+    }
+
+    .busy-item .b-row input[type="time"] {
+      width: 58px;
+      padding: 3px 4px;
+      font-size: 12px
+    }
+
+    .busy-item .b-row span {
+      color: var(--dim2);
+      font-size: 12px
+    }
+
+    .busy-item .del {
+      color: var(--dim2);
+      font-size: 16px
+    }
+
+    .busy-item .del:hover {
+      color: var(--red)
+    }
+
+    .busy-add {
+      width: 100%;
+      margin-top: 8px;
+      padding: 7px;
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      color: var(--dim);
+      font-size: 12.5px
+    }
+
+    .busy-add:hover {
+      color: var(--acc);
+      border-color: var(--acc)
+    }
+
+    /* 側欄內 TBA 與占用忙碌時段 */
+    .side-panel {
+      padding: 12px 18px;
+      border-top: 1px solid var(--line);
+    }
+
+    .side-panel h3 {
+      font-size: 12px;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .side-panel .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .side-panel .chip-item {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: #0d1630;
+      border: 1px solid var(--line);
+      cursor: pointer;
+    }
+
+    .side-panel .chip-item:hover {
+      border-color: var(--acc)
+    }
+
+    /* ---------- toolbar ---------- */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(17, 26, 44, .6);
+      backdrop-filter: blur(8px);
+      flex-wrap: wrap
+    }
+
+    .toolbar .stats {
+      font-size: 12px;
+      color: var(--dim);
+      margin-right: auto
+    }
+
+    .toolbar .stats b {
+      color: var(--acc)
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 13px;
+      border-radius: 9px;
+      border: 1px solid var(--line);
+      background: var(--panel2);
+      font-size: 12.5px;
+      transition: .15s;
+    }
+
+    .btn:hover {
+      border-color: var(--dim2)
+    }
+
+    .btn.primary {
+      background: linear-gradient(135deg, rgba(56, 189, 248, .25), rgba(129, 140, 248, .25));
+      border-color: rgba(56, 189, 248, .5);
+      color: #bfe9ff
+    }
+
+    .btn.danger {
+      color: #ffb4b4;
+      border-color: rgba(248, 113, 113, .35)
+    }
+
+    .btn.active {
+      border-color: var(--acc);
+      color: #bfe9ff;
+      background: rgba(56, 189, 248, .1)
+    }
+
+    .btn .material-symbols-rounded {
+      font-size: 16px
+    }
+
+    /* ---------- timetable ---------- */
+    .viewport {
+      flex: 1;
+      overflow: auto;
+      position: relative;
+      background: rgba(11, 18, 32, .4)
+    }
+
+    .grid {
+      position: relative;
+      min-width: 920px;
+      margin: 0 auto;
+      padding: 0 12px 24px;
+      width: max-content;
+    }
+
+    .ghead {
+      display: flex;
+      position: sticky;
+      top: 0;
+      background: rgba(11, 18, 32, .92);
+      backdrop-filter: blur(10px);
+      z-index: 6;
+      border-bottom: 1px solid var(--line);
+      border-radius: 0 0 10px 10px;
+    }
+
+    .ghead .tcol {
+      width: 150px;
+      min-width: 150px;
+      position: sticky;
+      left: 0;
+      z-index: 7;
+      background: rgba(11, 18, 32, .92);
+      backdrop-filter: blur(10px);
+      position: relative;
+    }
+
+    .ghead .dcol {
+      width: var(--grid-w);
+      min-width: var(--grid-w);
+      padding: 10px 8px;
+      text-align: center
+    }
+
+    .ghead .dcol .dname {
+      font-weight: 700;
+      font-size: 13.5px;
+      letter-spacing: .5px
+    }
+
+    .ghead .dcol .ddate {
+      color: var(--dim2);
+      font-size: 11px;
+      margin-top: 2px
+    }
+
+    .gbody {
+      display: flex;
+      position: relative
+    }
+
+    .tcol {
+      width: 150px;
+      min-width: 150px;
+      position: sticky;
+      left: 0;
+      z-index: 5;
+      background: rgba(11, 18, 32, .85);
+      backdrop-filter: blur(4px);
+      border-right: 1px solid var(--line);
+      position: relative;
+    }
+
+    .dcol {
+      width: var(--grid-w);
+      min-width: var(--grid-w);
+      position: relative;
+    }
+
+    .hline {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--line2);
+      pointer-events: none
+    }
+
+    .hline.half {
+      background: rgba(36, 49, 77, .35)
+    }
+
+    .hlabel {
+      position: absolute;
+      left: 6px;
+      transform: translateY(-7px);
+      font-size: 10.5px;
+      color: var(--dim2);
+      background: rgba(11, 18, 32, .7);
+      padding: 0 4px;
+      border-radius: 4px
+    }
+
+    .busy-region {
+      position: absolute;
+      background: repeating-linear-gradient(135deg, rgba(248, 113, 113, .16) 0 8px, rgba(248, 113, 113, .07) 8px 16px);
+      border: 1px dashed rgba(248, 113, 113, .4);
+      border-radius: 8px;
+      pointer-events: none;
+      z-index: 2
+    }
+
+    .section {
+      position: absolute;
+      border-radius: 9px;
+      padding: 5px 6px;
+      overflow: hidden;
+      cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, .08);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
+      transition: transform .12s, box-shadow .12s, border-color .12s;
+      z-index: 3;
+      min-height: 40px;
+      /* 確保按鈕不與文字重疊 */
+    }
+
+    .section.p-slim {
+      padding: 2px 3px;
+      border-radius: 6px
+    }
+
+    .section.p-micro {
+      padding: 0 1px;
+      border-radius: 5px;
+      font-size: 9px
+    }
+
+    .section.p-micro .s-code {
+      font-size: 9px
+    }
+
+    .section.p-micro .s-sec {
+      font-size: 8px
+    }
+
+    .section.p-micro .s-room,
+    .section.p-micro .s-instr {
+      display: none
+    }
+
+    .section:hover {
+      transform: translateY(-1px) scale(1.02);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, .5);
+      z-index: 9
+    }
+
+    .section .s-code {
+      font-weight: 700;
+      font-size: 11.5px;
+      line-height: 1.25
+    }
+
+    .section .s-sec {
+      font-size: 10px;
+      opacity: .85
+    }
+
+    .section .s-room {
+      font-size: 9.5px;
+      opacity: .7;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px
+    }
+
+    .section .s-instr {
+      font-size: 9px;
+      opacity: .6;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .section .full-label {
+      color: var(--red);
+      font-weight: 700;
+      font-size: 10px;
+      background: rgba(248, 113, 113, .15);
+      padding: 0 5px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-left: 4px;
+    }
+
+    /* 按鈕：預設隱藏，hover 顯示 */
+    .section .focus-btn,
+    .section .exclude-btn {
+      position: absolute;
+      font-size: 14px;
+      color: var(--dim2);
+      opacity: 0;
+      transition: opacity .15s;
+      cursor: pointer;
+      background: rgba(0, 0, 0, .4);
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      z-index: 10;
+    }
+
+    .section .exclude-btn {
+      bottom: 3px;
+      right: 3px;
+    }
+
+    /* 排除在右下 */
+    .section .focus-btn {
+      bottom: 3px;
+      left: 3px;
+    }
+
+    /* 聚焦在左下 */
+    .section:hover .focus-btn,
+    .section:hover .exclude-btn {
+      opacity: 0.8;
+    }
+
+    .section .focus-btn:hover,
+    .section .exclude-btn:hover {
+      color: var(--acc);
+      opacity: 1;
+    }
+
+    .section.focused {
+      outline: 2px solid var(--acc);
+      outline-offset: 1px;
+    }
+
+    /* ---------- detail drawer ---------- */
+    .drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 380px;
+      max-width: 92vw;
+      z-index: 40;
+      background: rgba(13, 22, 48, .96);
+      backdrop-filter: blur(20px);
+      border-left: 1px solid var(--line);
+      transform: translateX(105%);
+      transition: transform .28s cubic-bezier(.4, 0, .2, 1);
+      overflow-y: auto;
+      padding: 22px 22px 30px;
+    }
+
+    .drawer.open {
+      transform: none
+    }
+
+    .drawer .d-close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      color: var(--dim2);
+      font-size: 20px
+    }
+
+    .drawer .d-close:hover {
+      color: var(--txt)
+    }
+
+    .d-code {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: .3px
+    }
+
+    .d-title {
+      color: var(--dim);
+      font-size: 13px;
+      margin: 3px 0 16px;
+      line-height: 1.5
+    }
+
+    .d-row {
+      display: flex;
+      gap: 8px;
+      padding: 8px 0;
+      border-top: 1px solid var(--line);
+      font-size: 13px
+    }
+
+    .d-row .k {
+      color: var(--dim2);
+      width: 82px;
+      min-width: 82px;
+      font-size: 12px;
+      padding-top: 1px
+    }
+
+    .d-row .v {
+      flex: 1;
+      line-height: 1.6
+    }
+
+    .d-row .v ul {
+      margin: 0;
+      padding-left: 16px
+    }
+
+    .d-row .v ul li {
+      list-style: disc;
+      margin-bottom: 2px
+    }
+
+    .seatbar {
+      height: 8px;
+      background: #1b2a48;
+      border-radius: 5px;
+      overflow: hidden;
+      margin: 6px 0 4px;
+      display: flex
+    }
+
+    .seatbar i {
+      display: block;
+      height: 100%
+    }
+
+    .seatbar .used {
+      background: linear-gradient(90deg, #38bdf8, #818cf8)
+    }
+
+    .seatbar .full2 {
+      background: var(--red)
+    }
+
+    .seat-nums {
+      font-size: 12px;
+      color: var(--dim)
+    }
+
+    .seat-nums b {
+      color: var(--txt)
+    }
+
+    .rest-item {
+      margin-bottom: 6px
+    }
+
+    .rest-item .rt {
+      font-size: 12px;
+      color: var(--amber)
+    }
+
+    .rest-item ul {
+      margin: 3px 0 0 14px;
+      color: var(--dim);
+      font-size: 12px
+    }
+
+    .mutex-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px
+    }
+
+    .mt {
+      font-size: 11.5px;
+      padding: 3px 9px;
+      border-radius: 7px;
+      background: #1b2a48;
+      color: #ffd7a8;
+      border: 1px solid rgba(251, 191, 36, .25)
+    }
+
+    .d-actions {
+      margin-top: 18px;
+      display: flex;
+      gap: 8px
+    }
+
+    .d-actions .btn {
+      flex: 1;
+      justify-content: center
+    }
+
+    .meet-row {
+      background: #0d1630;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px 11px;
+      margin-bottom: 7px
+    }
+
+    .meet-row .mt-line {
+      font-size: 12.5px;
+      font-weight: 600
+    }
+
+    .meet-row .mt-sub {
+      color: var(--dim);
+      font-size: 11.5px;
+      margin-top: 3px;
+      line-height: 1.5
+    }
+
+    /* ---------- overlay ---------- */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 9, 18, .5);
+      z-index: 30;
+      opacity: 0;
+      pointer-events: none;
+      transition: .2s
+    }
+
+    .overlay.show {
+      opacity: 1;
+      pointer-events: auto
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      padding: 11px 18px;
+      border-radius: 12px;
+      font-size: 13px;
+      z-index: 60;
+      transition: .25s;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .5)
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0)
+    }
+
+    .toast.ok {
+      border-color: rgba(52, 211, 153, .4)
+    }
+
+    .toast.ok::before {
+      content: "✓ ";
+      color: var(--green)
+    }
+
+    .toast.err {
+      border-color: rgba(248, 113, 113, .4)
+    }
+
+    .toast.err::before {
+      content: "⚠ ";
+      color: var(--amber)
+    }
+
+    @media (max-width:1000px) {
+      .hamburger {
+        display: block
+      }
+
+      .sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0
+      }
+    }
+
+    ::-webkit-scrollbar {
+      width: 9px;
+      height: 9px
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #2b3d63;
+      border-radius: 5px
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <button class="hamburger" id="hamburger" title="選單"><span class="material-symbols-rounded">menu</span></button>
+
+    <!-- 側欄 -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <h1>CityU 課程時間表</h1>
+        <div class="sub" id="termLabel"></div>
+      </div>
+
+      <div class="filter">
+        <h2><span class="material-symbols-rounded" style="font-size:15px">tune</span> 過濾</h2>
+        <div class="field">
+          <label>科目</label>
+          <div class="chiprow" id="subjChips"></div>
+        </div>
+        <div class="field">
+          <label>搜尋 課號</label>
+          <input class="search" id="kw" placeholder="輸入課程代碼，如 CS1102" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>學分</label>
+          <div class="chiprow" id="creditChips"></div>
+        </div>
+        <div class="field">
+          <label>顯示星期</label>
+          <div class="chiprow" id="dayChips"></div>
+        </div>
+        <div class="toggles">
+          <label class="tg"><input type="checkbox" id="onlySeats"> 只顯示有位子 <small>剩餘 > 0</small></label>
+          <label class="tg"><input type="checkbox" id="hideTBA"> 隱藏無時間班 <small>TBA</small></label>
+          <label class="tg"><input type="checkbox" id="showSat"> 顯示星期六</label>
+        </div>
+        <button class="btn" id="resetBtn" style="width:100%;justify-content:center;margin-top:10px"><span
+            class="material-symbols-rounded">restart_alt</span> 重設過濾（含清除排除）</button>
+      </div>
+
+      <!-- 忙碌時段 -->
+      <div class="filter" style="border-bottom:none">
+        <h2><span class="material-symbols-rounded" style="font-size:15px">event_busy</span> 忙碌時段</h2>
+        <div class="busy-list" id="busyList"></div>
+        <button class="busy-add" id="addBusy"><span class="material-symbols-rounded" style="font-size:15px">add</span>
+          新增忙碌時段</button>
+      </div>
+
+      <!-- 無時間班級 (TBA) 面板 -->
+      <div class="side-panel" id="tbaSidePanel" style="display:none">
+        <h3><span class="material-symbols-rounded" style="font-size:15px">schedule</span> 無時間班級 (TBA)</h3>
+        <div class="chips" id="tbaChipsSide"></div>
+      </div>
+
+      <!-- 占用忙碌時段面板 -->
+      <div class="side-panel" id="conflictSidePanel" style="display:none">
+        <h3><span class="material-symbols-rounded" style="font-size:15px">warning</span> 占用忙碌時段</h3>
+        <div class="chips" id="conflictChipsSide"></div>
+      </div>
+    </aside>
+
+    <!-- 主區 -->
+    <div class="main">
+      <div class="toolbar">
+        <button class="btn" id="toggleSidebar" title="顯示 / 隱藏過濾面板"><span
+            class="material-symbols-rounded">filter_list</span></button>
+        <div class="stats" id="stats"></div>
+        <button class="btn" id="clearFocusBtn" style="display:none"><span class="material-symbols-rounded">clear</span>
+          清除所有聚焦</button>
+        <button class="btn" id="clearExcludedBtn" style="display:none"><span
+            class="material-symbols-rounded">restore</span> 恢復排除課程</button>
+      </div>
+      <div class="viewport" id="viewport">
+        <div class="grid" id="grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay"></div>
+  <aside class="drawer" id="drawer">
+    <button class="d-close" id="dClose"><span class="material-symbols-rounded">close</span></button>
+    <div id="dBody"></div>
+  </aside>
+  <div class="toast" id="toast"></div>
+
+  <script src="data.js"></script>
+  <script>
+    "use strict";
+    const DATA = window.COURSE_DATA;
+    const DAY_NAMES = DATA.meta.dayNames;
+    const G_START = DATA.meta.gridStart, G_END = DATA.meta.gridEnd;
+    const MIN_PER_PX = 0.85;
+    const dayVisible = [true, true, true, true, true, false];
+
+    /* ---------- state ---------- */
+    const state = {
+      subj: new Set(),
+      credits: new Set(),
+      kw: "",
+      onlySeats: false,
+      hideTBA: false,
+      busy: [],          // {id, label, day, start, end, on}
+      sidebarHidden: false,
+      focusList: [],     // [{ code, type, crn }]
+      excluded: new Set(), // 課程代碼（不含空格）集合
+    };
+
+    /* ---------- helpers ---------- */
+    const $ = (s, el = document) => el.querySelector(s);
+    const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+    const fmtMins = (m) => {
+      const h = Math.floor(m / 60), mm = m % 60;
+      const ap = h >= 12 ? "pm" : "am";
+      const hh = h % 12 === 0 ? 12 : h % 12;
+      return `${hh}:${String(mm).padStart(2, "0")} ${ap}`;
+    };
+    const fmtRange = (s, e) => `${fmtMins(s)} - ${fmtMins(e)}`;
+    const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const PALETTE = [
+      ["#38bdf8", "rgba(56,189,248,.14)"], ["#818cf8", "rgba(129,140,248,.14)"], ["#34d399", "rgba(52,211,153,.14)"],
+      ["#f472b6", "rgba(244,114,182,.14)"], ["#fbbf24", "rgba(251,191,36,.14)"], ["#fb7185", "rgba(251,113,133,.14)"],
+      ["#a3e635", "rgba(163,230,53,.14)"], ["#22d3ee", "rgba(34,211,238,.14)"], ["#c084fc", "rgba(192,132,252,.14)"],
+      ["#f97316", "rgba(249,115,22,.14)"], ["#2dd4bf", "rgba(45,212,191,.14)"], ["#e879f9", "rgba(232,121,249,.14)"],
+    ];
+    const codeColor = (code) => {
+      let h = 0; for (let i = 0; i < code.length; i++) h = (h * 31 + code.charCodeAt(i)) >>> 0;
+      return PALETTE[h % PALETTE.length];
+    };
+    let toastTimer = null;
+    function toast(msg, ok = true) {
+      const t = $("#toast"); t.textContent = msg; t.className = "toast show " + (ok ? "ok" : "err");
+      clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
+    }
+
+    /* ---------- flatten sections ---------- */
+    const allCourses = DATA.courses;
+    const sectionIndex = [];
+    for (const c of allCourses) {
+      for (const s of c.sections) {
+        s.crn = String(s.crn);
+        s._code = c.code; s._title = c.title; s._cr = c.cr; s._lv = c.lv;
+        sectionIndex.push(s);
+      }
+    }
+
+    /* ---------- filters ---------- */
+    function isTBA(s) { return s.tba; }
+    function busyConflict(s) {
+      if (!s.blk || !s.blk.length) return false;
+      return s.blk.some(b => state.busy.some(bb => {
+        if (!bb.on) return false;
+        if (bb.day !== b.day) return false;
+        return bb.start < b.end && b.start < bb.end;
+      }));
+    }
+    function kwTerms(kw) {
+      const raw = kw.split(/[\s,]+/).filter(Boolean);
+      const terms = [];
+      for (let i = 0; i < raw.length; i++) {
+        const t = raw[i];
+        if (/^[A-Za-z]{2,4}$/.test(t) && i + 1 < raw.length && /^\d/.test(raw[i + 1])) {
+          terms.push((t + raw[i + 1]).toLowerCase()); i++;
+        } else {
+          terms.push(t.toLowerCase());
+        }
+      }
+      return terms;
+    }
+    function matchFilters(s) {
+      // 排除課程
+      if (state.excluded.has(s._code.replace(/\s/g, ""))) return false;
+      // 聚焦
+      if (state.focusList.length > 0) {
+        const type = secMeta(s).type;
+        for (const f of state.focusList) {
+          if (s._code === f.code && type === f.type && s.crn !== f.crn) {
+            return false;
+          }
+        }
+      }
+      // 一般過濾
+      if (state.onlySeats && !(s.seats && s.seats.r > 0)) return false;
+      if (state.hideTBA && s.tba) return false;
+      if (state.subj.size && !state.subj.has(s._code.split(" ")[0])) return false;
+      if (state.credits.size && !state.credits.has(s._cr)) return false;
+      if (state.kw) {
+        const code = s._code.replace(/\s/g, "").toLowerCase();
+        if (!kwTerms(state.kw).some(t => code.startsWith(t) || code.includes(t))) return false;
+      }
+      return true;
+    }
+    // 判斷是否有任何課程匹配搜尋（用於輸入框高亮）
+    function hasSearchMatch() {
+      if (!state.kw) return false;
+      const terms = kwTerms(state.kw);
+      if (terms.length === 0) return false;
+      for (const s of sectionIndex) {
+        const code = s._code.replace(/\s/g, "").toLowerCase();
+        if (terms.some(t => code.startsWith(t) || code.includes(t))) return true;
+      }
+      return false;
+    }
+    const secMeta = (s) => {
+      const m = String(s.sec).match(/^([A-Z])([A-Z]?)(\d+)/);
+      return m ? { type: m[1], group: m[2] || "" } : { type: "", group: "" };
+    };
+    const isLecture = (s) => secMeta(s).type === "C";
+    const pairKey = (s) => `${s._code}::${secMeta(s).group}`;
+    function activeSections() {
+      let list = sectionIndex.filter(s => matchFilters(s));
+      if (state.focusList.length === 0) {
+        const visibleLectures = new Set();
+        const allLectureKeys = new Set();
+        for (const s of list) if (isLecture(s)) visibleLectures.add(pairKey(s));
+        for (const s of sectionIndex) if (isLecture(s)) allLectureKeys.add(pairKey(s));
+        list = list.filter(s => {
+          if (isLecture(s)) return true;
+          const k = pairKey(s);
+          return !allLectureKeys.has(k) || visibleLectures.has(k);
+        });
+      }
+      return list;
+    }
+    function shownDays() {
+      const d = [];
+      for (let i = 0; i < 6; i++) { if (i < 5 ? dayVisible[i] : state.showSat) d.push(i); }
+      return d;
+    }
+
+    /* ---------- overlap layout ---------- */
+    function layoutDay(blocks) {
+      const sorted = [...blocks].sort((a, b) => a.s - b.s || b.e - a.e);
+      const clusters = [];
+      let cur = null;
+      for (const b of sorted) {
+        if (!cur || b.s >= cur.end) { cur = { end: b.e, items: [] }; clusters.push(cur); }
+        cur.end = Math.max(cur.end, b.e); cur.items.push(b);
+      }
+      let maxDepth = 1;
+      for (const cl of clusters) {
+        const used = [];
+        for (const it of cl.items) {
+          let col = used.findIndex(c => c === null || c.e <= it.s);
+          if (col < 0) { used.push({ e: it.e }); col = used.length - 1; }
+          else used[col] = { e: it.e };
+          it.col = col;
+        }
+        cl.depth = used.length;
+        maxDepth = Math.max(maxDepth, cl.depth);
+      }
+      return { clusters, maxDepth };
+    }
+
+    /* ---------- render grid ---------- */
+    function render() {
+      const grid = $("#grid");
+      const days = shownDays();
+      const active = activeSections();
+      const totalH = (G_END - G_START) / MIN_PER_PX;
+
+      const dayW = {};
+      for (const d of days) {
+        const daySections = active.filter(s => !s.tba && s.blk.some(b => b.day === d));
+        const blocks = [];
+        for (const s of daySections) {
+          for (const b of s.blk) {
+            if (b.day !== d) continue;
+            if (b.start < G_START || b.end > G_END) continue;
+            blocks.push({ s: b.start, e: b.end, b, sec: s });
+          }
+        }
+        dayW[d] = Math.max(100, layoutDay(blocks).maxDepth * 100);
+      }
+
+      let head = '<div class="ghead"><div class="tcol"></div>';
+      for (const d of days) {
+        head += `<div class="dcol" style="width:${dayW[d]}px;min-width:${dayW[d]}px"><div class="dname">${["一", "二", "三", "四", "五", "六"][d]}</div><div class="ddate">${DAY_NAMES[d]}</div></div>`;
+      }
+      head += '</div>';
+
+      let gbody = '<div class="gbody">';
+      gbody += `<div class="tcol" style="height:${totalH}px">`;
+      for (let m = G_START; m <= G_END; m += 30) {
+        const y = (m - G_START) / MIN_PER_PX;
+        if (m % 60 === 0) { gbody += `<div class="hline" style="top:${y}px"></div><span class="hlabel" style="top:${y}px">${fmtMins(m)}</span>`; }
+        else gbody += `<div class="hline half" style="top:${y}px"></div>`;
+      }
+      gbody += '</div>';
+
+      const busyRegions = [];
+      for (const bb of state.busy) {
+        if (!bb.on) continue;
+        if (days.includes(bb.day)) {
+          busyRegions.push({ day: bb.day, s: bb.start, e: bb.end });
+        }
+      }
+
+      for (const d of days) {
+        let inner = `<div class="dcol" data-day="${d}" style="width:${dayW[d]}px;min-width:${dayW[d]}px;height:${totalH}px">`;
+        for (let m = G_START; m <= G_END; m += 30) {
+          const y = (m - G_START) / MIN_PER_PX;
+          inner += `<div class="hline ${m % 60 ? "half" : ""}" style="top:${y}px"></div>`;
+        }
+        for (const br of busyRegions.filter(x => x.day === d)) {
+          inner += `<div class="busy-region" style="top:${(br.s - G_START) / MIN_PER_PX}px;height:${(br.e - br.s) / MIN_PER_PX}px;left:2px;right:2px" title="忙碌: ${fmtRange(br.s, br.e)}"></div>`;
+        }
+        const daySections = active.filter(s => !s.tba && s.blk.some(b => b.day === d));
+        const blocks = [];
+        for (const s of daySections) {
+          for (const b of s.blk) {
+            if (b.day !== d) continue;
+            if (b.start < G_START || b.end > G_END) continue;
+            blocks.push({ s: b.start, e: b.end, b, sec: s });
+          }
+        }
+        const { clusters } = layoutDay(blocks);
+        for (const cl of clusters) {
+          const depth = cl.depth;
+          for (const it of cl.items) {
+            const { s, b, col, sec } = it;
+            const top = (s - G_START) / MIN_PER_PX, hgt = (it.e - it.s) / MIN_PER_PX;
+            const w = 100 / depth, left = (col * 100) / depth;
+            const colr = codeColor(sec._code);
+            const full = sec.seats && sec.seats.r <= 0;
+            const isFocused = state.focusList.some(f => f.crn === sec.crn);
+            const codeNoSpace = sec._code.replace(/\s/g, "");
+            inner += `<div class="section ${isFocused ? 'focused' : ''}" data-crn="${sec.crn}" style="top:${top}px;height:${hgt}px;left:${left}%;width:${w}%;background:${colr[1]};border-left:3px solid ${colr[0]};">
+          <div class="s-code">${esc(sec._code)} <span class="s-sec">${esc(sec.sec)}</span>
+            ${full ? '<span class="full-label">FULL</span>' : ''}
+          </div>
+          <div class="s-room" title="${esc(b.building ? b.building + " " + b.rooms : "")}">${esc(b.rooms || "")}</div>
+          ${hgt > 52 ? `<div class="s-instr">${esc(b.instructors || "")}</div>` : ""}
+          <span class="focus-btn" data-focus-crn="${sec.crn}" title="切換聚焦（隱藏相同課程同課型的其他班次）"><span class="material-symbols-rounded">center_focus_strong</span></span>
+          <span class="exclude-btn" data-exclude-code="${codeNoSpace}" title="移除該課程（所有班次）"><span class="material-symbols-rounded">remove_circle</span></span>
+        </div>`;
+          }
+        }
+        inner += '</div>';
+        gbody += inner;
+      }
+      gbody += '</div>';
+
+      grid.innerHTML = head + gbody;
+
+      // 更新輸入框高亮狀態
+      updateSearchHighlight();
+
+      // 統計
+      const courseSet = new Set();
+      for (const s of active) {
+        if (!s.tba) courseSet.add(s._code);
+      }
+      const uniqueCourses = courseSet.size;
+      const totalUnique = new Set(sectionIndex.filter(s => !s.tba).map(s => s._code)).size;
+      let statsText = `顯示 <b>${uniqueCourses}</b> / ${totalUnique} 門課 &nbsp;·&nbsp; 星期 ${days.length} 天`;
+      if (state.focusList.length > 0) {
+        const typeMap = { 'C': 'Lecture', 'L': 'Lab', 'T': 'Tutorial', 'S': 'Seminar' };
+        const focusStrs = state.focusList.map(f => `${f.code} ${typeMap[f.type] || f.type} (${f.crn})`).join(', ');
+        statsText += ` &nbsp;·&nbsp; 聚焦: <b>${focusStrs}</b>`;
+      }
+      if (state.excluded.size > 0) {
+        statsText += ` &nbsp;·&nbsp; 已排除: <b>${[...state.excluded].join(', ')}</b>`;
+      }
+      $("#stats").innerHTML = statsText;
+
+      $("#clearFocusBtn").style.display = state.focusList.length ? 'inline-flex' : 'none';
+      $("#clearExcludedBtn").style.display = state.excluded.size ? 'inline-flex' : 'none';
+
+      renderSidePanels();
+    }
+
+    /* ---------- 輸入框高亮更新 ---------- */
+    function updateSearchHighlight() {
+      const input = $("#kw");
+      if (!input) return;
+      const val = input.value.trim();
+      if (val === "") {
+        input.classList.remove('match', 'no-match');
+        return;
+      }
+      // 檢查是否有課程代碼匹配
+      const match = hasSearchMatch();
+      if (match) {
+        input.classList.remove('no-match');
+        input.classList.add('match');
+      } else {
+        input.classList.remove('match');
+        input.classList.add('no-match');
+      }
+    }
+
+    /* ---------- 側欄面板 ---------- */
+    function renderSidePanels() {
+      const tb = sectionIndex.filter(s => s.tba && matchFilters(s));
+      const tbaContainer = $("#tbaChipsSide");
+      tbaContainer.innerHTML = "";
+      for (const s of tb) {
+        const el = document.createElement("span");
+        el.className = "chip-item";
+        el.textContent = `${s._code} ${s.sec}`;
+        el.title = s._title;
+        el.onclick = () => { openDetail(s.crn); };
+        tbaContainer.appendChild(el);
+      }
+      $("#tbaSidePanel").style.display = (state.hideTBA || tb.length === 0) ? "none" : "block";
+
+      const active = activeSections();
+      const conflicting = active.filter(s => !s.tba && busyConflict(s));
+      const conflictContainer = $("#conflictChipsSide");
+      conflictContainer.innerHTML = "";
+      for (const s of conflicting) {
+        const el = document.createElement("span");
+        el.className = "chip-item";
+        el.textContent = `${s._code} ${s.sec}`;
+        el.title = s._title;
+        el.onclick = () => { openDetail(s.crn); };
+        conflictContainer.appendChild(el);
+      }
+      $("#conflictSidePanel").style.display = (conflicting.length === 0) ? "none" : "block";
+    }
+
+    /* ---------- busy manager ---------- */
+    let busyId = 0;
+    function renderBusy() {
+      const list = $("#busyList");
+      list.innerHTML = "";
+      for (const bb of state.busy) {
+        const item = document.createElement("div");
+        item.className = "busy-item";
+        item.innerHTML = `
+      <div class="b-head">
+        <span class="b-title">${esc(bb.label || "忙碌時段")}</span>
+        <span style="display:flex;align-items:center;gap:8px">
+          <label class="tg" style="margin-bottom:0;padding:0"><input type="checkbox" data-bon="${bb.id}" ${bb.on ? "checked" : ""}> 啟用</label>
+          <button class="del" data-del="${bb.id}"><span class="material-symbols-rounded">delete</span></button>
+        </span>
+      </div>
+      <div class="b-row">
+        <select data-day="${bb.id}">
+          ${[0, 1, 2, 3, 4, 5].map(i => `<option value="${i}" ${bb.day === i ? 'selected' : ''}>${["一", "二", "三", "四", "五", "六"][i]}</option>`).join('')}
+        </select>
+        <input type="time" value="${timeVal(bb.start)}" data-bs="${bb.id}" step="60">
+        <span>–</span>
+        <input type="time" value="${timeVal(bb.end)}" data-be="${bb.id}" step="60">
+      </div>
+    `;
+        list.appendChild(item);
+      }
+    }
+    const timeVal = (m) => { const h = Math.floor(m / 60), mm = m % 60; return `${String(h).padStart(2, "0")}:${String(mm).padStart(2, "0")}`; };
+    const timeToMin = (v) => { const p = v.split(":").map(Number); return p[0] * 60 + p[1]; };
+    function addBusy() {
+      state.busy.push({ id: ++busyId, label: "忙碌", day: 0, start: 9 * 60, end: 10 * 60, on: true });
+      persist(); renderBusy(); render();
+    }
+
+    $("#busyList").addEventListener("input", (e) => {
+      const t = e.target;
+      if (t.dataset.bon !== undefined) {
+        const bb = state.busy.find(x => x.id == +t.dataset.bon);
+        if (bb) { bb.on = t.checked; persist(); render(); }
+      }
+      if (t.dataset.bs !== undefined || t.dataset.be !== undefined) {
+        const id = + (t.dataset.bs || t.dataset.be);
+        const bb = state.busy.find(x => x.id === id);
+        if (!bb) return;
+        if (t.dataset.bs !== undefined) bb.start = timeToMin(t.value);
+        else bb.end = timeToMin(t.value);
+        if (bb.end <= bb.start) bb.end = bb.start + 60;
+        persist(); render();
+      }
+      if (t.dataset.day !== undefined) {
+        const bb = state.busy.find(x => x.id == +t.dataset.day);
+        if (bb) { bb.day = +t.value; persist(); render(); }
+      }
+    });
+
+    $("#busyList").addEventListener("click", (e) => {
+      const d = e.target.closest("[data-del]");
+      if (d) {
+        state.busy = state.busy.filter(x => x.id !== +d.dataset.del);
+        persist(); renderBusy(); render();
+      }
+    });
+    $("#addBusy").addEventListener("click", addBusy);
+
+    /* ---------- 聚焦與排除功能 ---------- */
+    function toggleFocus(crn) {
+      const s = sectionIndex.find(x => x.crn === crn);
+      if (!s) return;
+      const type = secMeta(s).type;
+      if (!type) {
+        toast('此班無課型資訊', false);
+        return;
+      }
+      const key = { code: s._code, type: type, crn: crn };
+      const idx = state.focusList.findIndex(f => f.code === key.code && f.type === key.type && f.crn === key.crn);
+      if (idx !== -1) {
+        state.focusList.splice(idx, 1);
+        toast(`取消聚焦 ${key.code} ${key.type} (${key.crn})`, true);
+      } else {
+        const existIdx = state.focusList.findIndex(f => f.code === key.code && f.type === key.type);
+        if (existIdx !== -1) {
+          state.focusList.splice(existIdx, 1);
+          toast(`取代同類聚焦：${key.code} ${key.type}`, true);
+        }
+        state.focusList.push(key);
+        const typeMap = { 'C': 'Lecture', 'L': 'Lab', 'T': 'Tutorial', 'S': 'Seminar' };
+        toast(`聚焦 ${key.code} ${typeMap[type] || type} (${key.crn})`, true);
+      }
+      persist();
+      render();
+    }
+
+    function toggleExclude(codeNoSpace) {
+      if (state.excluded.has(codeNoSpace)) {
+        state.excluded.delete(codeNoSpace);
+        toast(`恢復課程 ${codeNoSpace}`, true);
+      } else {
+        state.excluded.add(codeNoSpace);
+        toast(`已排除課程 ${codeNoSpace}，所有班次將隱藏`, true);
+      }
+      persist();
+      render();
+    }
+
+    $("#clearFocusBtn").addEventListener("click", () => {
+      state.focusList = [];
+      persist();
+      render();
+    });
+
+    $("#clearExcludedBtn").addEventListener("click", () => {
+      state.excluded.clear();
+      persist();
+      render();
+    });
+
+    /* ---------- 點擊事件 ---------- */
+    $("#grid").addEventListener("click", (e) => {
+      const focusBtn = e.target.closest(".focus-btn");
+      if (focusBtn) {
+        e.stopPropagation();
+        const crn = focusBtn.dataset.focusCrn;
+        toggleFocus(crn);
+        return;
+      }
+      const excludeBtn = e.target.closest(".exclude-btn");
+      if (excludeBtn) {
+        e.stopPropagation();
+        const code = excludeBtn.dataset.excludeCode;
+        toggleExclude(code);
+        return;
+      }
+      const secEl = e.target.closest(".section");
+      if (secEl) {
+        const crn = secEl.dataset.crn;
+        if (crn) openDetail(crn);
+      }
+    });
+
+    /* ---------- detail drawer ---------- */
+    function openDetail(crn) {
+      const s = sectionIndex.find(x => x.crn === crn);
+      if (!s) return;
+      const colr = codeColor(s._code);
+      const seats = s.seats;
+      let seatHtml = "無資料";
+      if (seats) {
+        const pct = seats.c ? Math.round((seats.a / seats.c) * 100) : 0;
+        const overflow = seats.a > seats.c;
+        seatHtml = `
+      <div class="seatbar">${seats.c ? `<i class="${overflow ? "full2" : "used"}" style="width:${Math.min(pct, 100)}%"></i>` : ""}</div>
+      <div class="seat-nums"><b>${seats.a}</b> / ${seats.c} 已選 &nbsp;·&nbsp; 剩餘 <b style="color:${seats.r > 0 ? "var(--green)" : "var(--red)"}">${seats.r}</b></div>`;
+      }
+      const REST_LBL = { Programs: "Programme", Majors: "Major", Levels: "Level", Campuses: "Campus" };
+      const restHtml = (s.rest || []).length ? s.rest.map(g => {
+        const lbl = (g.neg ? "EXCLUDED from " : "only for ") + (REST_LBL[g.type] || g.type);
+        return `<div class="rest-item"><div class="rt">${esc(lbl)}</div><ul>${g.items.map(i => `<li>${esc(i)}</li>`).join("")}</ul></div>`;
+      }).join("") : '<div style="color:var(--dim2);font-size:12px">無特別限制</div>';
+
+      let prereqItems = [];
+      if (s.rest) {
+        for (const g of s.rest) {
+          if (g.type && (g.type.toLowerCase().includes('prerequisite') || g.type.toLowerCase().includes('pre-requisite'))) {
+            if (g.items) prereqItems = prereqItems.concat(g.items);
+          }
+        }
+      }
+      if (prereqItems.length === 0 && s.reg) {
+        const match = s.reg.match(/Prerequisites?:\s*(.+?)(?=\s*\(|$)/i);
+        if (match) {
+          const raw = match[1].trim();
+          prereqItems = raw.split(/[,;、\s]+/).filter(t => t.length > 0 && !/^(or|and|minimum grade of)/i.test(t));
+        }
+      }
+      const prereqHtml = prereqItems.length ? `<ul>${prereqItems.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : '<span style="color:var(--dim2)">無</span>';
+
+      const mutex = (s.mutex || []).length ? `<div class="mutex-tags">${s.mutex.map(m => `<span class="mt">${esc(m)}</span>`).join("")}</div>` : '<div style="color:var(--dim2);font-size:12px">無</div>';
+      const timeHtml = s.tba ? '<span style="color:var(--amber)">TBA 待定</span>' :
+        (s.blk || []).map(b => `<div class="meet-row"><div class="mt-line">${DAY_NAMES[b.day]} ${fmtRange(b.start, b.end)}</div><div class="mt-sub">${esc([b.building, b.rooms].filter(Boolean).join(" ") || "—")}<br>${esc(b.instructors || "—")}</div></div>`).join("");
+      $("#dBody").innerHTML = `
+    <div style="width:46px;height:5px;border-radius:3px;background:${colr[0]};margin-bottom:14px"></div>
+    <div class="d-code">${esc(s._code)} <span style="color:var(--dim);font-size:14px">${esc(s.sec)}</span></div>
+    <div class="d-title">${esc(s._title)}</div>
+    <div class="d-row"><div class="k">CRN</div><div class="v">${esc(s.crn)}</div></div>
+    <div class="d-row"><div class="k">學分</div><div class="v">${s._cr}</div></div>
+    <div class="d-row"><div class="k">學制</div><div class="v">${esc(s._lv)}</div></div>
+    ${s.campus ? `<div class="d-row"><div class="k">校園</div><div class="v">${esc(s.campus)}</div></div>` : ""}
+    <div class="d-row"><div class="k">排課型別</div><div class="v">${esc(s.sched || "—")}</div></div>
+    ${s.reg ? `<div class="d-row"><div class="k">選課日期</div><div class="v">${esc(s.reg)}</div></div>` : ""}
+    <div class="d-row"><div class="k">座位</div><div class="v">${seatHtml}</div></div>
+    <div class="d-row"><div class="k">時間</div><div class="v">${timeHtml}</div></div>
+    <div class="d-row"><div class="k">先修課程</div><div class="v">${prereqHtml}</div></div>
+    <div class="d-row"><div class="k">收生限制</div><div class="v">${restHtml}</div></div>
+    <div class="d-row"><div class="k">互斥課程</div><div class="v">${mutex}</div></div>
+  `;
+      $("#drawer").classList.add("open");
+      $("#overlay").classList.add("show");
+    }
+    $("#dClose").addEventListener("click", closeDrawer);
+    $("#overlay").addEventListener("click", closeDrawer);
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
+    function closeDrawer() { $("#drawer").classList.remove("open"); $("#overlay").classList.remove("show"); }
+
+    /* ---------- chips & filters UI ---------- */
+    function buildChips() {
+      const subjCount = {};
+      for (const c of allCourses) { const s = c.code.split(" ")[0]; subjCount[s] = (subjCount[s] || 0) + 1; }
+      const subjChips = $("#subjChips"); subjChips.innerHTML = "";
+      const subjNames = { "CS": "電腦科學", "GE": "通識教育" };
+      for (const s of Object.keys(subjCount).sort()) {
+        const on = state.subj.has(s);
+        const el = document.createElement("span");
+        el.className = "chip " + (on ? "on" : "");
+        el.innerHTML = `${esc(subjNames[s] || s)} <span class="n">${subjCount[s]}</span>`;
+        el.onclick = () => { on ? state.subj.delete(s) : state.subj.add(s); persist(); buildChips(); render(); };
+        subjChips.appendChild(el);
+      }
+      const cr = {};
+      for (const c of allCourses) { cr[c.cr] = (cr[c.cr] || 0) + 1; }
+      const crChips = $("#creditChips"); crChips.innerHTML = "";
+      for (const k of Object.keys(cr).sort((a, b) => a - b)) {
+        const on = state.credits.has(+k);
+        const el = document.createElement("span");
+        el.className = "chip " + (on ? "on" : "");
+        el.innerHTML = `${k} 學分 <span class="n">${cr[k]}</span>`;
+        el.onclick = () => { on ? state.credits.delete(+k) : state.credits.add(+k); persist(); buildChips(); render(); };
+        crChips.appendChild(el);
+      }
+      const dayChips = $("#dayChips"); dayChips.innerHTML = "";
+      for (let i = 0; i < 5; i++) {
+        const on = dayVisible[i];
+        const el = document.createElement("span");
+        el.className = "chip " + (on ? "on" : "");
+        el.textContent = DAY_NAMES[i];
+        el.onclick = () => { dayVisible[i] = !dayVisible[i]; persist(); buildChips(); render(); };
+        dayChips.appendChild(el);
+      }
+    }
+    $("#kw").addEventListener("input", (e) => {
+      state.kw = e.target.value.trim();
+      updateSearchHighlight(); // 即時更新高亮
+      render();
+    });
+    $("#onlySeats").addEventListener("change", (e) => { state.onlySeats = e.target.checked; persist(); render(); });
+    $("#hideTBA").addEventListener("change", (e) => { state.hideTBA = e.target.checked; persist(); render(); });
+    $("#showSat").addEventListener("change", (e) => { state.showSat = e.target.checked; persist(); render(); });
+    $("#resetBtn").addEventListener("click", () => {
+      state.subj.clear(); state.credits.clear(); state.kw = ""; state.onlySeats = false; state.hideTBA = false; state.showSat = false;
+      for (let i = 0; i < 5; i++) dayVisible[i] = true;
+      state.excluded.clear();
+      state.focusList = [];
+      buildChips(); $("#kw").value = ""; $("#onlySeats").checked = false; $("#hideTBA").checked = false; $("#showSat").checked = false;
+      updateSearchHighlight();
+      render();
+    });
+    function toggleSidebar() {
+      state.sidebarHidden = !state.sidebarHidden;
+      $("#sidebar").classList.toggle("collapsed", state.sidebarHidden);
+      $("#toggleSidebar").classList.toggle("active", state.sidebarHidden);
+      persist();
+    }
+    $("#toggleSidebar").addEventListener("click", toggleSidebar);
+    $("#hamburger").addEventListener("click", toggleSidebar);
+
+    /* ---------- persistence ---------- */
+    const LS_KEY = "cityu-tt-state-v10";
+    function persist() {
+      try {
+        const data = {
+          subj: [...state.subj], credits: [...state.credits], kw: state.kw,
+          onlySeats: state.onlySeats, hideTBA: state.hideTBA, showSat: state.showSat,
+          days: dayVisible.slice(), sidebarHidden: state.sidebarHidden,
+          busy: state.busy.map(b => ({ id: b.id, label: b.label, day: b.day, start: b.start, end: b.end, on: b.on })),
+          focusList: state.focusList,
+          excluded: [...state.excluded],
+        };
+        localStorage.setItem(LS_KEY, JSON.stringify(data));
+      } catch (_) { }
+    }
+    function restore() {
+      try {
+        const d = JSON.parse(localStorage.getItem(LS_KEY) || "null");
+        if (!d) return;
+        if (d.subj) state.subj = new Set(d.subj);
+        if (d.credits) state.credits = new Set(d.credits);
+        if (d.kw) state.kw = d.kw;
+        state.onlySeats = !!d.onlySeats; state.hideTBA = !!d.hideTBA; state.showSat = !!d.showSat;
+        state.sidebarHidden = !!d.sidebarHidden;
+        if (d.focusList) state.focusList = d.focusList;
+        if (d.excluded) state.excluded = new Set(d.excluded);
+        if (d.days) d.days.forEach((v, i) => { if (i < 5) dayVisible[i] = v; });
+        if (d.busy) {
+          state.busy = d.busy.map(b => ({ id: b.id, label: b.label, day: b.day || 0, start: b.start || 9 * 60, end: b.end || 10 * 60, on: b.on !== false }));
+          busyId = Math.max(busyId, ...(d.busy.map(b => b.id || 0)));
+        }
+        $("#kw").value = state.kw; $("#onlySeats").checked = state.onlySeats;
+        $("#hideTBA").checked = state.hideTBA; $("#showSat").checked = state.showSat;
+        updateSearchHighlight();
+      } catch (_) { }
+    }
+
+    /* ---------- init ---------- */
+    (function init() {
+      $("#termLabel").textContent = `${DATA.meta.termLabel} · ${DATA.meta.term} · ${DATA.stats.courses} 課 / ${DATA.stats.sections} 班`;
+      restore();
+      $("#sidebar").classList.toggle("collapsed", state.sidebarHidden);
+      $("#toggleSidebar").classList.toggle("active", state.sidebarHidden);
+      buildChips();
+      renderBusy();
+      render();
+    })();
+  </script>
+</body>
+
+</html>

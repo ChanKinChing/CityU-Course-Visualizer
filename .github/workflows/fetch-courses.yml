@@ -1,0 +1,76 @@
+name: Fetch Courses
+
+on:
+  schedule:
+    - cron: "0 22 * * 0"  # Every Sunday 6am HKT (22:00 UTC Saturday)
+  workflow_dispatch:
+    inputs:
+      subjects:
+        description: "Subjects to fetch (comma-separated)"
+        default: "CS,GE"
+        required: false
+      term:
+        description: "Term code"
+        default: "202609"
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install fetcher dependencies
+        working-directory: fetcher
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: fetcher
+        run: npx playwright install chromium
+
+      - name: Fetch courses from Banweb
+        working-directory: fetcher
+        run: |
+          node fetch-courses.mjs \
+            --subjects "${{ github.event.inputs.subjects || 'CS,GE' }}" \
+            --term "${{ github.event.inputs.term || '202609' }}"
+
+      - name: Find latest output
+        id: find
+        run: |
+          LATEST=$(ls -td fetcher/output/20*/ | head -1)
+          echo "path=${LATEST}" >> $GITHUB_OUTPUT
+          echo "Latest output: $LATEST"
+
+      - name: Generate data.js
+        run: |
+          node visualizer/data-prep.mjs "${{ steps.find.outputs.path }}courses.json" data.js
+
+      - name: Show summary
+        run: |
+          echo "=== Output ==="
+          wc -c data.js
+          echo ""
+          echo "=== Stats from meta.json ==="
+          cat "${{ steps.find.outputs.path }}meta.json" | grep -E "courseCount|sectionCount|seatDataComplete"
+
+      - name: Commit updated data.js
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data.js
+          if git diff --cached --quiet; then
+            echo "No changes to data.js"
+          else
+            DATE=$(date -u +"%Y-%m-%d %H:%M UTC")
+            git commit -m "Update course data [automated] - $DATE"
+            git push
+            echo "data.js updated and committed"
+          fi

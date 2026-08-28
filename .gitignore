@@ -1,0 +1,4 @@
+node_modules/
+fetcher/output/
+debug/
+*.log

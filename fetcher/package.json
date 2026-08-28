@@ -1,0 +1,15 @@
+{
+  "name": "tool-cityu-course-fetcher",
+  "version": "1.0.0",
+  "description": "CityU Banweb course fetcher - CS + GE, public no-login, Playwright based",
+  "type": "module",
+  "main": "fetch-courses.mjs",
+  "scripts": {
+    "start": "node fetch-courses.mjs",
+    "probe": "node probe-banner.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.52.0"
+  },
+  "license": "MIT"
+}
