@@ -1552,14 +1552,16 @@
       for (const c of allCourses) { const s = c.code.split(" ")[0]; subjCount[s] = (subjCount[s] || 0) + 1; }
       const subjChips = $("#subjChips"); subjChips.innerHTML = "";
       const subjNames = {
-        "AR":"建築","BA":"商業","CE":"土木","CH":"中文","CL":"傳播",
-        "CS":"電腦科學","CT":"創作","EC":"經濟","EE":"電機","EL":"電子",
-        "EN":"英文","EV":"環境","ED":"教育","FE":"財金","GE":"通識",
-        "HA":"人文","HB":"健康","HG":"地理","HP":"哲學","HR":"人力資源",
-        "IE":"工業","IS":"資訊","LS":"生命科學","MA":"數學","ME":"機械",
-        "MF":"製造","MS":"材料","MU":"音樂","PE":"體育","PH":"物理",
-        "PP":"公共政策","PS":"心理","SA":"社會","SC":"科學","SM":"科學管理",
-        "SR":"社會科學","TH":"戲劇","UR":"城市","VM":"獸醫"
+        "AC":"會計","BIOS":"生物醫學","BME":"生物醫學工程","BMS":"生物醫學科學",
+        "CA":"建築","CAH":"人文","CB":"商業","CHEM":"化學","CHIN":"中文",
+        "COM":"傳播","CS":"電腦科學","CSCI":"電腦科學(舊碼)","DSC":"數據科學",
+        "EC":"經濟","EE":"電機","EF":"財務","EN":"英文","FB":"法學",
+        "GE":"通識","IS":"資訊系統","LC":"語言傳播","LW":"法律",
+        "LT":"文學","MA":"數學","MGT":"管理","MKT":"市場學",
+        "MSE":"材料科學","MS":"材料","MNE":"微電子","NS":"神經科學",
+        "PED":"體育","PH":"哲學","PHY":"物理","PIA":"公共政策",
+        "SM":"科學管理","SS":"社會科學","SEE":"永續環境","SYE":"系統工程",
+        "VCS":"視覺傳播"
       };
       for (const s of Object.keys(subjCount).sort()) {
         const on = state.subj.has(s);
