@@ -199,7 +199,7 @@ let browser;
 let failCount = 0;
 try {
   log("Tool-CityU-Course-Fetcher v1.0.0");
-  log(`term=${TERM} subjects=[${SUBJECTS.join(", ")}] ${BACHELOR_ONLY ? "僅本科" : "全部學制"} delay=${DELAY_MIN}-${DELAY_MAX}ms limit=${LIMIT || "all"}`);
+  log(`term=${TERM} subjects=${SUBJECTS_INPUT.length ? SUBJECTS_INPUT.join(", ") : "(auto-discover ALL)"} ${BACHELOR_ONLY ? "僅本科" : "全部學制"} delay=${DELAY_MIN}-${DELAY_MAX}ms limit=${LIMIT || "all"}`);
   log(`output dir: ${OUT_DIR}`);
 
   browser = await chromium.launch({ channel: "chrome", headless: !HEADED });
