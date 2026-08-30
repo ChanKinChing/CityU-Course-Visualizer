@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
     inputs:
       subjects:
-        description: "Subjects to fetch (comma-separated)"
-        default: "CS,GE"
+        description: "Subjects to fetch (comma-separated, leave empty for ALL)"
+        default: ""
         required: false
       term:
         description: "Term code"
@@ -38,9 +38,11 @@ jobs:
       - name: Fetch courses from Banweb
         working-directory: fetcher
         run: |
-          node fetch-courses.mjs \
-            --subjects "${{ github.event.inputs.subjects || 'CS,GE' }}" \
-            --term "${{ github.event.inputs.term || '202609' }}"
+          ARGS="--term \"${{ github.event.inputs.term || '202609' }}\""
+          if [ -n "${{ github.event.inputs.subjects }}" ]; then
+            ARGS="$ARGS --subjects \"${{ github.event.inputs.subjects }}\""
+          fi
+          eval node fetch-courses.mjs $ARGS
 
       - name: Find latest output
         id: find

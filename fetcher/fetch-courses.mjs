@@ -29,7 +29,7 @@ function argVal(name, def) {
   return i >= 0 && args[i + 1] ? args[i + 1] : def;
 }
 const TERM = argVal("term", process.env.CITYU_TERM || "202609");
-const SUBJECTS = argVal("subjects", "CS,GE")
+const SUBJECTS_INPUT = argVal("subjects", "")
   .split(",")
   .map((s) => s.trim().toUpperCase())
   .filter(Boolean);
@@ -224,9 +224,13 @@ try {
     opts.map((o) => o.value)
   );
   log(`  search form 就緒, subject 選項: ${subjectOptions.length} 個`);
-  for (const s of SUBJECTS) {
-    if (!subjectOptions.includes(s)) log(`  !注意: subject "${s}" 不在選項內, 可能無結果`);
-  }
+  const SUBJECTS = SUBJECTS_INPUT.length > 0
+    ? SUBJECTS_INPUT.filter(s => {
+        if (!subjectOptions.includes(s)) log(`  !注意: subject "${s}" 不在選項內, 跳過`);
+        return subjectOptions.includes(s);
+      })
+    : subjectOptions;
+  log(`  將搜尋 ${SUBJECTS.length} 個 subjects`);
 
   // --- step 2: 各 subject 搜尋, 收集 sections ---
   log("[2/4] 搜尋 subjects, 收集 sections");
