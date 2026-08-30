@@ -998,11 +998,12 @@
     (function() {
       var s = document.createElement('script');
       s.src = 'https://chankinching.github.io/CityU-Course-Visualizer/data.js';
-      s.onload = function() { /* loaded from GitHub */ };
+      s.onload = function() { window.dispatchEvent(new Event('data-ready')); };
       s.onerror = function() {
         /* fallback: try local data.js */
         var f = document.createElement('script');
         f.src = 'data.js';
+        f.onload = function() { window.dispatchEvent(new Event('data-ready')); };
         document.head.appendChild(f);
       };
       document.head.appendChild(s);
@@ -1010,6 +1011,7 @@
   </script>
   <script>
     "use strict";
+    function initApp() {
     const DATA = window.COURSE_DATA;
     if (!DATA) {
       var wrap = document.querySelector('.wrap') || document.querySelector('.app') || document.body;
@@ -1660,6 +1662,9 @@
       renderBusy();
       render();
     })();
+    } /* end initApp */
+    if (window.COURSE_DATA) { initApp(); }
+    else { window.addEventListener('data-ready', initApp); }
   </script>
 </body>
 
